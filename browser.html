@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+      background-color: #1a1a1a;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }8
+
+    header { flex-shrink: 0; }
+
+    .url-opts {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background-color: #202124;
+      border-bottom: 1px solid #333333;
+      position: relative;
+    }
+
+    button {
+      background-color: #2b2c30;
+      color: #ffffff;
+      border: 1px solid #444444;
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #3d3e42;
+      border-color: #666666;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+
+    button.active {
+      background-color: #005fb8;
+      border-color: #0078d4;
+    }
+
+    button.proxy-active {
+      background-color: #28a745;
+      border-color: #34d058;
+      color: #ffffff;
+    }
+
+    .input-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background-color: #121212;
+      border: 1px solid #555555;
+      border-radius: 16px;
+      padding: 0 10px;
+    }
+
+    .input-container:focus-within {
+      border-color: #0078d4;
+    }
+
+    #engine-indicator {
+      font-size: 11px;
+      color: #888888;
+      margin-right: 6px;
+      user-select: none;
+    }
+
+    #search-input {
+      flex: 1;
+      padding: 6px 0;
+      border: none;
+      background-color: transparent;
+      color: #ffffff;
+      outline: none;
+      font-size: 13px;
+    }
+
+    .viewport-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: #ffffff;
+      position: relative;
+    }
+
+    iframe#web-viewport {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background-color: #ffffff;
+    }
+
+    .info {
+      padding: 10px 16px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #cccccc;
+      background-color: #181818;
+      border-top: 1px solid #2a2a2a;
+      flex-shrink: 0;
+    }
+
+    /* Standard Popovers */
+    .popover {
+      display: none;
+      position: absolute;
+      top: 50px;
+      background-color: #28292d;
+      border: 1px solid #444444;
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      max-width: 380px;
+      width: 90%;
+    }
+
+    .popover.show { display: block; }
+
+    /* Centered Modal for Code Editor */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-overlay.show { display: flex; }
+
+    .modal-box {
+      background-color: #28292d;
+      border: 1px solid #444444;
+      border-radius: 8px;
+      padding: 16px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+    }
+
+    .popover h4, .modal-box h4 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      color: #ffffff;
+    }
+
+    .popover-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .popover-list li {
+      padding: 6px 8px;
+      margin: 3px 0;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1f2023;
+    }
+
+    .popover-list li:hover { background-color: #383a40; }
+
+    .close-btn {
+      float: right;
+      cursor: pointer;
+      font-size: 12px;
+      color: #aaaaaa;
+    }
+
+    .close-btn:hover { color: #ffffff; }
+
+    .tabs-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .tab-card {
+      background: #1a1a1a;
+      border: 1px solid #444;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tab-card span {
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+      max-width: 260px;
+    }
+
+    .tab-card.active-tab {
+      border-color: #0078d4;
+      background: #253342;
+    }
+
+    textarea.editor {
+      width: 100%;
+      height: 200px;
+      background: #121212;
+      color: #00ff66;
+      border: 1px solid #444;
+      border-radius: 4px;
+      font-family: monospace;
+      padding: 10px;
+      font-size: 13px;
+      resize: vertical;
+      outline: none;
+    }
+
+    textarea.editor:focus {
+      border-color: #0078d4;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="url-opts" id="uo">
+      <!-- Back -->
+      <button onclick="back()" id="b" title="Go Back" disabled>&ll;</button>
+      
+      <!-- Forward -->
+      <button onclick="forward()" id="f" title="Go Forward" disabled>&gg;</button>
+      
+      <!-- Search -->
+      <button onclick="find()" id="search" title="Search">&#8981;</button>
+      
+      <!-- Address Bar -->
+      <div class="input-container">
+        <span id="engine-indicator">[Google]</span>
+        <input id="search-input" placeholder="Type a URL or search query..." onkeydown="if(event.key==='Enter') find()" />
+      </div>
+
+      <!-- Proxy Toggle -->
+      <button onclick="toggleProxyMode()" id="proxy-btn" title="Toggle Proxy Mode">Proxy: OFF</button>
+      
+      <!-- Open in New Internal Tab -->
+      <button onclick="openExternal()" id="open-ext" title="Open Page in New Tab">&#8599;</button>
+      
+      <!-- Search Engines Menu -->
+      <button onclick="browsingOpts()" id="bo" title="Search Engines">Engine</button>
+      
+      <!-- Reload -->
+      <button onclick="reloadPage()" id="reload-btn" title="Reload Page">&#10227;</button>
+      
+      <!-- Code Editor -->
+      <button onclick="codeEditor()" id="cd" title="Code Editor">{ }</button>
+      
+      <!-- Rote AI -->
+      <button onclick="ai()" id="artificial-intelligence" title="Rote AI">Rote</button>
+      
+      <!-- Domain Lookup -->
+      <button onclick="findDomain()" id="fd" title="Find Domain">&gt;&lt;</button>
+      
+      <!-- Notifications -->
+      <button onclick="notifications()" id="notify" title="Notifications">&excl;</button>
+      
+      <!-- Tab Switcher -->
+      <button onclick="tabs()" id="tab" title="Tabs">&#42542;</button>
+      
+      <!-- Bookmarks List -->
+      <button onclick="bookmarks()" id="bookmark" title="Bookmarks">~</button>
+      
+      <!-- Bookmark Star Toggle -->
+      <button onclick="toggleBookmarkCurrent()" id="star-btn" title="Bookmark This Tab">&#9734;</button>
+    </div>
+
+    <!-- Engine Selector Popover -->
+    <div id="opts-popover" class="popover" style="right: 280px;">
+      <span class="close-btn" onclick="togglePopover('opts-popover')">&#10005;</span>
+      <h4>Select Search Engine</h4>
+      <ul class="popover-list" id="engine-list"></ul>
+    </div>
+
+    <!-- Code Editor Modal (Fixed Center Overlay for Mobile & Desktop) -->
+    <div id="editor-modal" class="modal-overlay">
+      <div class="modal-box">
+        <span class="close-btn" onclick="codeEditor()">&#10005;</span>
+        <h4>Quick Code Editor</h4>
+        <textarea id="code-textarea" class="editor" placeholder="<!-- Write HTML or JS to test -->&#10;<h1>Hello Riping</h1>"></textarea>
+        <div style="display:flex; gap:6px; margin-top:8px;">
+          <button style="flex:1;" onclick="runCode()">Run in Viewport</button>
+          <button onclick="clearCode()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notifications Popover -->
+    <div id="notify-popover" class="popover" style="right: 120px;">
+      <span class="close-btn" onclick="togglePopover('notify-popover')">&#10005;</span>
+      <h4>Notifications</h4>
+      <ul class="popover-list" id="notify-list">
+        <li><span>Riping v1.0 initialized</span><small>Active</small></li>
+        <li><span>Code editor modal updated</span><small>System</small></li>
+      </ul>
+      <button style="margin-top: 8px; width: 100%;" onclick="clearNotifications()">Clear Notifications</button>
+    </div>
+
+    <!-- Tabs Popover -->
+    <div id="tabs-popover" class="popover" style="right: 80px;">
+      <span class="close-btn" onclick="togglePopover('tabs-popover')">&#10005;</span>
+      <h4>Open Tabs</h4>
+      <div class="tabs-grid" id="tabs-grid"></div>
+      <button style="margin-top: 8px; width: 100%;" onclick="createNewTab()">+ New Tab</button>
+    </div>
+
+    <!-- Bookmarks Popover -->
+    <div id="bm-popover" class="popover" style="right: 20px;">
+      <span class="close-btn" onclick="togglePopover('bm-popover')">&#10005;</span>
+      <h4>Saved Bookmarks</h4>
+      <ul class="popover-list" id="bm-list"></ul>
+    </div>
+
+    <!-- AI Results Popover (Rote AI Wikipedia Integration) -->
+    <div id="ai-popover" class="popover" style="left: 200px; width: 320px;">
+      <span class="close-btn" onclick="togglePopover('ai-popover')">&#10005;</span>
+      <h4>Rote AI &bull; Wikipedia Search</h4>
+      <div style="display: flex; gap: 6px; margin: 8px 0;">
+        <input id="ai-search-input" placeholder="Ask Rote AI or search Wikipedia..." style="flex:1; padding: 6px; background:#121212; border:1px solid #444; color:#fff; border-radius:4px; font-size:12px; outline:none;" onkeydown="if(event.key==='Enter') searchRoteAI()" />
+        <button onclick="searchRoteAI()" style="padding: 6px 10px; font-size: 12px;">Search</button>
+      </div>
+      <div id="ai-content" style="font-size: 12px; color: #ddd; max-height: 240px; overflow-y: auto;">
+        <em style="color: #888;">Type a query above to query Wikipedia via Rote AI.</em>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Viewport Area -->
+  <div class="viewport-container">
+    <iframe id="web-viewport" src="about:blank" title="Web Viewport"></iframe>
+  </div>
+  
+  <section class="info">
+    Browser: Riping
+    <br>
+    Version: 1.0
+    <br>
+    Company: The Chakancini Workshop&trade;
+    <br>
+    Application Availability: https://github.com/upload-byte/app_store
+    <br>
+    Built with JS
+    <br>
+    &copy; 2026 The Chackancini Workshop&trade; | All Rights Reserved
+  </section>
+
+  <script>
+    // Search Engines configured per spec:
+    // Google - Wikipedia - Duck Duck Go API - Bing - Brave - Perplexity - Yahoo - Wiby
+    const ENGINES = {
+      Google: "https://www.google.com/search?q=",
+      Wikipedia: "https://en.wikipedia.org/wiki/Special:Search?search=",
+      "Duck Duck Go": "https://duckduckgo.com/?q=",
+      Bing: "https://www.bing.com/search?q=",
+      Brave: "https://search.brave.com/search?q=",
+      Perplexity: "https://www.perplexity.ai/search?q=",
+      Yahoo: "https://search.yahoo.com/search?p=",
+      Wiby: "https://wiby.me/?q="
+    };
+
+    let selectedEngine = "Google";
+    let isProxyEnabled = false;
+    let activeTabId = 1;
+    let tabsList = [
+      { id: 1, title: "Home", url: "about:blank", history: ["about:blank"], historyIdx: 0 }
+    ];
+    let savedBookmarks = JSON.parse(localStorage.getItem("riping_bookmarks") || '["https://github.com/upload-byte/app_store"]');
+
+    // Close popovers when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.popover') && !e.target.closest('button') && !e.target.closest('.modal-box')) {
+        document.querySelectorAll('.popover').forEach(p => p.classList.remove('show'));
+      }
+    });
+
+    // 1. Navigation Functions
+    function back() {
+      const currentTab = tabsList.find(t => t.id === activeTabId);
+      if (currentTab && currentTab.historyIdx > 0) {
+        currentTab.historyIdx--;
+        navigateTo(currentTab.history[currentTab.historyIdx], true);
+      }
+    }
+
+    function forward() {
+      const currentTab = tabsList.find(t => t.id === activeTabId);
+      if (currentTab && currentTab.historyIdx < currentTab.history.length - 1) {
+        currentTab.historyIdx++;
+        navigateTo(currentTab.history[currentTab.historyIdx], true);
+      }
+    }
+
+    function updateNavButtons() {
+      const currentTab = tabsList.find(t => t.id === activeTabId);
+      const backBtn = document.getElementById("b");
+      const fwdBtn = document.getElementById("f");
+      
+      if (currentTab) {
+        backBtn.disabled = currentTab.historyIdx <= 0;
+        fwdBtn.disabled = currentTab.historyIdx >= currentTab.history.length - 1;
+      }
+    }
+
+    // 2. Search / Find Execution
+    function find() {
+      const input = document.getElementById("search-input").value.trim();
+      if (!input) return;
+
+      let targetUrl = input;
+      if (!input.startsWith("http://") && !input.startsWith("https://") && !input.startsWith("about:") && !input.startsWith("data:")) {
+        targetUrl = ENGINES[selectedEngine] + encodeURIComponent(input);
+      }
+
+      navigateTo(targetUrl);
+    }
+
+    function navigateTo(targetUrl, isHistoryAction = false) {
+      const currentTab = tabsList.find(t => t.id === activeTabId);
+      if (!currentTab) return;
+
+      if (!isHistoryAction) {
+        currentTab.history = currentTab.history.slice(0, currentTab.historyIdx + 1);
+        currentTab.history.push(targetUrl);
+        currentTab.historyIdx = currentTab.history.length - 1;
+      }
+
+      currentTab.url = targetUrl;
+      currentTab.title = targetUrl === "about:blank" ? "Home" : targetUrl.replace(/^https?:\/\//, '').slice(0, 18);
+
+      document.getElementById("search-input").value = targetUrl === "about:blank" ? "" : targetUrl;
+      loadPageInIframe(targetUrl);
+
+      updateNavButtons();
+      updateStarButton();
+    }
+
+    async function loadPageInIframe(targetUrl) {
+      const iframe = document.getElementById("web-viewport");
+
+      if (targetUrl === "about:blank") {
+        iframe.removeAttribute("srcdoc");
+        iframe.src = "about:blank";
+        return;
+      }
+
+      if (targetUrl.startsWith("data:")) {
+        iframe.removeAttribute("srcdoc");
+        iframe.src = targetUrl;
+        return;
+      }
+
+      const isNativeFriendly = targetUrl.includes("duckduckgo.com") || 
+                               targetUrl.includes("wikipedia.org") || 
+                               targetUrl.includes("wiby.me");
+
+      if (!isProxyEnabled || isNativeFriendly) {
+        iframe.removeAttribute("srcdoc");
+        iframe.src = targetUrl;
+        return;
+      }
+
+      try {
+        const proxyApiUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+        const res = await fetch(proxyApiUrl);
+        if (!res.ok) throw new Error("Proxy fetch failed");
+        
+        const data = await res.json();
+        if (data.contents) {
+          const baseUrl = new URL(targetUrl).origin;
+          const baseTag = `<head><base href="${baseUrl}/">`;
+          let html = data.contents;
+          html = html.includes("<head>") ? html.replace("<head>", baseTag) : baseTag + html;
+          iframe.srcdoc = html;
+        } else {
+          throw new Error("No contents");
+        }
+      } catch (err) {
+        iframe.removeAttribute("srcdoc");
+        iframe.src = targetUrl;
+      }
+    }
+
+    // 3. Browsing Options / Search Engine Selector
+    function browsingOpts() {
+      const list = document.getElementById("engine-list");
+      list.innerHTML = "";
+      Object.keys(ENGINES).forEach(engine => {
+        const li = document.createElement("li");
+        li.textContent = engine;
+        li.onclick = () => {
+          selectedEngine = engine;
+          document.getElementById("engine-indicator").textContent = `[${engine}]`;
+          togglePopover('opts-popover');
+        };
+        list.appendChild(li);
+      });
+      togglePopover('opts-popover');
+    }
+
+    // 4. Proxy Toggle
+    function toggleProxyMode() {
+      isProxyEnabled = !isProxyEnabled;
+      const proxyBtn = document.getElementById("proxy-btn");
+      if (isProxyEnabled) {
+        proxyBtn.textContent = "Proxy: ON";
+        proxyBtn.classList.add("proxy-active");
+      } else {
+        proxyBtn.textContent = "Proxy: OFF";
+        proxyBtn.classList.remove("proxy-active");
+      }
+      reloadPage();
+    }
+
+    // 5. Open External (New Internal Tab)
+    function openExternal() {
+      const currentTab = tabsList.find(t => t.id === activeTabId);
+      const targetUrl = (currentTab && currentTab.url !== "about:blank") ? currentTab.url : "about:blank";
+      
+      const newId = Date.now();
+      tabsList.push({
+        id: newId,
+        title: targetUrl === "about:blank" ? "New Tab" : (currentTab.title || "New Tab"),
+        url: targetUrl,
+        history: [targetUrl],
+        historyIdx: 0
+      });
+
+      switchTab(newId);
+    }
+
+    // 6. Reload Page
+    function reloadPage() {
+      const currentTab = tabsList.find(t => t.id === activeTabId);
+      if (currentTab) {
+        navigateTo(currentTab.url, true);
+      }
+    }
+
+    // 7. Code Editor Modal Toggle & Execution
+    function codeEditor() {
+      const modal = document.getElementById("editor-modal");
+      modal.classList.toggle('show');
+    }
+
+    function runCode() {
+      const code = document.getElementById("code-textarea").value;
+      if (!code.trim()) return;
+      
+      const iframe = document.getElementById("web-viewport");
+      iframe.removeAttribute("src");
+      iframe.srcdoc = code;
+
+      const currentTab = tabsList.find(t => t.id === activeTabId);
+      if (currentTab) {
+        currentTab.url = "data:text/html;custom_code";
+        currentTab.title = "Custom Scratchpad";
+        document.getElementById("search-input").value = currentTab.url;
+      }
+      codeEditor(); // Close modal
+    }
+
+    function clearCode() {
+      document.getElementById("code-textarea").value = "";
+    }
+
+    // 8. AI Assistant (Rote AI Wikipedia Integration)
+    function ai() {
+      togglePopover('ai-popover');
+      setTimeout(() => {
+        const aiInput = document.getElementById("ai-search-input");
+        if (aiInput) aiInput.focus();
+      }, 100);
+    }
+
+    async function searchRoteAI() {
+      const inputEl = document.getElementById("ai-search-input");
+      const contentEl = document.getElementById("ai-content");
+      const query = inputEl.value.trim();
+
+      if (!query) return;
+
+      contentEl.innerHTML = "<div style='color: #888; text-align: center; padding: 10px;'>Searching Wikipedia...</div>";
+
+      try {
+        const apiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error("Network response failed");
+
+        const data = await response.json();
+        const results = data.query?.search;
+
+        if (!results || results.length === 0) {
+          contentEl.innerHTML = "<div style='color: #aaa; padding: 6px;'>No Wikipedia articles found.</div>";
+          return;
+        }
+
+        contentEl.innerHTML = "";
+        const list = document.createElement("ul");
+        list.className = "popover-list";
+
+        results.slice(0, 6).forEach(item => {
+          const li = document.createElement("li");
+          li.style.flexDirection = "column";
+          li.style.alignItems = "flex-start";
+          li.style.gap = "2px";
+
+          const snippet = item.snippet.replace(/<\/?[^>]+(>|$)/g, "");
+
+          li.innerHTML = `
+            <strong style="color: #4da6ff; font-size: 13px;">${item.title}</strong>
+            <span style="color: #bbb; font-size: 11px; line-height: 1.3;">${snippet}...</span>
+          `;
+
+          li.onclick = () => {
+            const articleUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title.replace(/ /g, '_'))}`;
+            navigateTo(articleUrl);
+            togglePopover('ai-popover');
+          };
+
+          list.appendChild(li);
+        });
+
+        contentEl.appendChild(list);
+
+      } catch (err) {
+        contentEl.innerHTML = `<div style='color: #ff6b6b; padding: 6px;'>Failed to fetch results. Check your connection.</div>`;
+      }
+    }
+
+    // 9. Domain Lookup
+    function findDomain() {
+      const val = document.getElementById("search-input").value.trim();
+      if (!val || val === "about:blank") {
+        alert("No active web address to parse.");
+        return;
+      }
+
+      try {
+        let testUrl = val;
+        if (!val.startsWith("http://") && !val.startsWith("https://")) {
+          testUrl = "https://" + val;
+        }
+        const parsed = new URL(testUrl);
+        alert(`Domain Info:\n\n• Hostname: ${parsed.hostname}\n• Protocol: ${parsed.protocol}\n• Path: ${parsed.pathname || '/'}\n• Origin: ${parsed.origin}`);
+      } catch (e) {
+        alert("Could not parse domain. Ensure URL format is correct.");
+      }
+    }
+
+    // 10. Notifications
+    function notifications() {
+      togglePopover('notify-popover');
+    }
+
+    function clearNotifications() {
+      document.getElementById("notify-list").innerHTML = "<li style='color:#888;'>No new notifications.</li>";
+    }
+
+    // 11. Tab Switcher
+    function tabs() {
+      renderTabs();
+      togglePopover('tabs-popover');
+    }
+
+    function renderTabs() {
+      const grid = document.getElementById("tabs-grid");
+      grid.innerHTML = "";
+      tabsList.forEach(t => {
+        const card = document.createElement("div");
+        card.className = `tab-card ${t.id === activeTabId ? 'active-tab' : ''}`;
+        
+        card.innerHTML = `
+          <span>${t.title || t.url}</span>
+          ${tabsList.length > 1 ? `<button style="padding:1px 5px; font-size:10px; margin-left:6px;" onclick="closeTab(${t.id}, event)">✕</button>` : ''}
+        `;
+        card.onclick = () => switchTab(t.id);
+        grid.appendChild(card);
+      });
+    }
+
+    function switchTab(id) {
+      activeTabId = id;
+      const tab = tabsList.find(t => t.id === id);
+      if (tab) {
+        navigateTo(tab.history[tab.historyIdx], true);
+      }
+      renderTabs();
+    }
+
+    function createNewTab() {
+      const newId = Date.now();
+      tabsList.push({ id: newId, title: "New Tab", url: "about:blank", history: ["about:blank"], historyIdx: 0 });
+      switchTab(newId);
+    }
+
+    function closeTab(id, e) {
+      e.stopPropagation();
+      if (tabsList.length <= 1) return;
+
+      tabsList = tabsList.filter(t => t.id !== id);
+      if (activeTabId === id) {
+        activeTabId = tabsList[tabsList.length - 1].id;
+      }
+      switchTab(activeTabId);
+    }
+
+    // 12. Bookmarks & Star Toggle
+    function bookmarks() {
+      renderBookmarks();
+      togglePopover('bm-popover');
+    }
+
+    function renderBookmarks() {
+      const list = document.getElementById("bm-list");
+      list.innerHTML = "";
+      if (savedBookmarks.length === 0) {
+        list.innerHTML = "<li style='color:#888;'>No bookmarks saved.</li>";
+        return;
+      }
+
+      savedBookmarks.forEach(bm => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px;">${bm}</span>
+          <button style="padding:2px 6px; font-size:10px;" onclick="removeBookmark('${bm}', event)">✕</button>
+        `;
+        li.onclick = () => {
+          navigateTo(bm);
+          togglePopover('bm-popover');
+        };
+        list.appendChild(li);
+      });
+    }
+
+    function toggleBookmarkCurrent() {
+      const currentUrl = document.getElementById("search-input").value.trim();
+      if (!currentUrl || currentUrl === "about:blank") return;
+
+      const idx = savedBookmarks.indexOf(currentUrl);
+      if (idx > -1) {
+        savedBookmarks.splice(idx, 1);
+      } else {
+        savedBookmarks.push(currentUrl);
+      }
+      localStorage.setItem("riping_bookmarks", JSON.stringify(savedBookmarks));
+      updateStarButton();
+    }
+
+    function removeBookmark(bm, e) {
+      e.stopPropagation();
+      savedBookmarks = savedBookmarks.filter(b => b !== bm);
+      localStorage.setItem("riping_bookmarks", JSON.stringify(savedBookmarks));
+      renderBookmarks();
+      updateStarButton();
+    }
+
+    function updateStarButton() {
+      const currentUrl = document.getElementById("search-input").value.trim();
+      const starBtn = document.getElementById("star-btn");
+      if (savedBookmarks.includes(currentUrl) && currentUrl !== "" && currentUrl !== "about:blank") {
+        starBtn.innerHTML = "&#9733;";
+        starBtn.classList.add("active");
+      } else {
+        starBtn.innerHTML = "&#9734;";
+        starBtn.classList.remove("active");
+      }
+    }
+
+    function togglePopover(id) {
+      document.querySelectorAll('.popover').forEach(p => {
+        if (p.id !== id) p.classList.remove('show');
+      });
+      const pop = document.getElementById(id);
+      if (pop) pop.classList.toggle('show');
+    }
+
+    // Initial setup
+    updateNavButtons();
+  </script>
+</body>
+</html>
